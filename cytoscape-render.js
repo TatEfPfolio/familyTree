@@ -21,6 +21,8 @@ function renderCytoscape(data) {
     });
   });
 
+  console.log("renderCS starting", document.getElementById("cy").clientWidth, document.getElementById("cy").clientHeight);
+
   cytoscape({
     container: document.getElementById('cy'),
     elements: [...nodes, ...edges],
