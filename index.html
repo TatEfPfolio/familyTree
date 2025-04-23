@@ -38,7 +38,7 @@
     });
 
     // Load shared data
-    fetch('tree-data.json')
+    fetch('treeData.json')
       .then(res => res.json())
       .then(data => {
         renderCytoscape(data);
