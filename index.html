@@ -2,84 +2,96 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Family Tree (D3)</title>
+  <title>Family Tree with D3</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body { margin: 0; font-family: sans-serif; }
     svg { width: 100vw; height: 100vh; }
-    .node circle {
-      fill: #69b3a2;
-    }
-    .node text {
-      font: 14px sans-serif;
-      text-anchor: middle;
-      fill: #333;
-    }
-    .link {
-      fill: none;
-      stroke: #ccc;
-      stroke-width: 2px;
-    }
+    .node text { font-size: 12px; text-anchor: middle; }
+    .spouse-line { stroke: #999; stroke-dasharray: 4; }
   </style>
 </head>
 <body>
-  <svg></svg>
-
-  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script>
-    fetch("treeData.json")
+    fetch('treeData.json')
       .then(res => res.json())
       .then(data => {
-        // Build a map of all people
-        const people = Object.fromEntries(data.map(p => [p.id, { ...p, children: [] }]));
+        const personMap = Object.fromEntries(data.map(p => [p.id, { ...p, children: [] }]));
 
-        // Link children to parents
-        data.forEach(person => {
-          (person.parents || []).forEach(pid => {
-            if (people[pid]) {
-              people[pid].children.push(people[person.id]);
+        // Build hierarchy based on parents
+        data.forEach(p => {
+          (p.parents || []).forEach(pid => {
+            if (personMap[pid]) {
+              personMap[pid].children.push(personMap[p.id]);
             }
           });
         });
 
-        // Find root(s) - people with no parents
-        const roots = data.filter(p => !p.parents || p.parents.length === 0);
-        if (roots.length === 0) {
-          alert("No root found in data (nobody without parents)");
-          return;
-        }
-
-        const root = d3.hierarchy(people[roots[0].id]);
+        // Use first person without parents as root
+        const rootPerson = data.find(p => !(p.parents && p.parents.length));
+        const root = d3.hierarchy(personMap[rootPerson.id]);
 
         const width = window.innerWidth;
         const height = window.innerHeight;
 
-        const tree = d3.tree().size([width - 100, height - 100]);
-        tree(root);
+        const svg = d3.select("body").append("svg")
+          .attr("viewBox", [0, 0, width, height]);
 
-        const svg = d3.select("svg")
-          .append("g")
-          .attr("transform", "translate(50,50)");
+        const g = svg.append("g").attr("transform", "translate(50,50)");
 
-        svg.selectAll(".link")
+        const treeLayout = d3.tree().size([width - 100, height - 100]);
+        treeLayout(root);
+
+        // Links (parent-child)
+        g.selectAll(".link")
           .data(root.links())
           .join("path")
-          .attr("class", "link")
+          .attr("fill", "none")
+          .attr("stroke", "#ccc")
+          .attr("stroke-width", 2)
           .attr("d", d3.linkVertical()
             .x(d => d.x)
-            .y(d => d.y)
-          );
+            .y(d => d.y));
 
-        const node = svg.selectAll(".node")
+        // Nodes
+        const node = g.selectAll(".node")
           .data(root.descendants())
           .join("g")
           .attr("class", "node")
           .attr("transform", d => `translate(${d.x},${d.y})`);
 
-        node.append("circle").attr("r", 6);
+        node.append("circle")
+          .attr("r", 6)
+          .attr("fill", "#69b3a2");
 
         node.append("text")
           .attr("dy", -10)
-          .text(d => `${d.data.full_name} (${d.data.birth_year || "?"}–${d.data.death_year || "?"})`);
+          .text(d => `${d.data.full_name} (${d.data.birth_year}–${d.data.death_year})`);
+
+        // Add spouse connections
+        const nodeById = {};
+        root.descendants().forEach(d => nodeById[d.data.id] = d);
+
+        const spousePairs = new Set(); // avoid duplicate lines
+
+        data.forEach(p => {
+          (p.spouses || []).forEach(spouseId => {
+            const key = [p.id, spouseId].sort().join("-");
+            if (!spousePairs.has(key) && nodeById[p.id] && nodeById[spouseId]) {
+              spousePairs.add(key);
+              const p1 = nodeById[p.id];
+              const p2 = nodeById[spouseId];
+
+              g.append("line")
+                .attr("x1", p1.x)
+                .attr("y1", p1.y)
+                .attr("x2", p2.x)
+                .attr("y2", p2.y)
+                .attr("class", "spouse-line");
+            }
+          });
+        });
+
       });
   </script>
 </body>
