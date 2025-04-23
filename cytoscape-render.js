@@ -7,7 +7,8 @@ function renderCytoscape(data) {
   }));
 
   const edges = [];
-  
+  document.getElementById('cy').innerHTML = '';
+
   // Connect parents and children
   data.forEach(p => {
     (p.parents || []).forEach(parentId => {
