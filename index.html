@@ -45,7 +45,10 @@
     fetch('treeData.json')
       .then(res => res.json())
       .then(data => {
+        console.log("renderCS starting", document.getElementById("cy").clientWidth, document.getElementById("cy").clientHeight);
+        renderD3(data);
         renderCytoscape(data);
+        console.log("renderD3 starting", document.getElementById("d3").clientWidth, document.getElementById("d3").clientHeight);
         renderD3(data);
       });
   </script>
