@@ -4,6 +4,8 @@ function renderD3(data) {
 
   console.log("renderD3 starting", document.getElementById("d3").clientWidth, document.getElementById("d3").clientHeight);
 
+  document.getElementById('d3').innerHTML = '';
+
   // Establish parent-child relationships
   data.forEach(p => {
     (p.parents || []).forEach(pid => {
