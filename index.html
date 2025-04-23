@@ -1,87 +1,141 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Family Tree</title>
+  <meta charset="UTF-8">
+  <title>Family Tree Viewer</title>
   <style>
-    body {
-      font-family: sans-serif;
-    }
-    .node circle {
-      fill: #69b3a2;
-    }
-    .node text {
-      font-size: 14px;
-    }
-    .link {
-      fill: none;
-      stroke: #ccc;
-      stroke-width: 2px;
-    }
+    body { margin: 0; font-family: sans-serif; }
+    .tabs { display: flex; background: #eee; }
+    .tab { padding: 1em; cursor: pointer; }
+    .tab.active { background: #ddd; font-weight: bold; }
+    .view { display: none; height: calc(100vh - 50px); }
+    .view.active { display: block; }
+    #cy, #d3 { width: 100%; height: 100%; }
   </style>
 </head>
 <body>
-  <h2>Family Tree</h2>
-  <svg width="960" height="600"></svg>
 
+  <div class="tabs">
+    <div class="tab active" data-target="cy">Cytoscape Tree</div>
+    <div class="tab" data-target="d3">D3 Tree</div>
+  </div>
+
+  <div id="cy" class="view active"></div>
+  <div id="d3" class="view"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/cytoscape@3.25.0/dist/cytoscape.min.js"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script>
-    async function main() {
-      const raw = await fetch('treeData.json');
-      const flat = await raw.json();
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.target).classList.add('active');
+      });
+    });
 
-      // Convert flat to nested
-      const map = Object.fromEntries(flat.map(p => [p.id, { ...p, children: [] }]));
-      let roots = [];
+    // Load shared data
+    fetch('tree-data.json')
+      .then(res => res.json())
+      .then(data => {
+        renderCytoscape(data);
+        renderD3(data);
+      });
 
-      for (const p of flat) {
-        if (p.parents.length === 0) {
-          roots.push(map[p.id]);
-        } else {
-          for (const parentId of p.parents) {
-            if (map[parentId]) {
-              map[parentId].children.push(map[p.id]);
-            }
-          }
+    // ---- Cytoscape View ----
+    function renderCytoscape(data) {
+      const nodes = data.map(p => ({
+        data: {
+          id: p.id,
+          label: `${p.full_name} (${p.birth_year || "?"}–${p.death_year || "?"})`
         }
-      }
+      }));
 
-      const root = d3.hierarchy(roots[0]);
+      const edges = [];
+      data.forEach(p => {
+        (p.parents || []).forEach(parentId => {
+          edges.push({ data: { source: parentId, target: p.id } });
+        });
+      });
 
-      const width = 960;
-      const height = 600;
+      cytoscape({
+        container: document.getElementById('cy'),
+        elements: [...nodes, ...edges],
+        layout: { name: 'breadthfirst', directed: true, padding: 30 },
+        style: [
+          { selector: 'node', style: {
+            'background-color': '#69b3a2',
+            'label': 'data(label)',
+            'text-valign': 'center',
+            'color': '#333',
+            'font-size': '14px',
+            'text-outline-width': 1,
+            'text-outline-color': '#fff'
+          }},
+          { selector: 'edge', style: {
+            'width': 2,
+            'line-color': '#ccc',
+            'target-arrow-color': '#ccc',
+            'target-arrow-shape': 'triangle'
+          }}
+        ]
+      });
+    }
 
-      const svg = d3.select("svg"),
-            g = svg.append("g").attr("transform", "translate(50,50)");
+    // ---- D3 View ----
+    function renderD3(data) {
+      const personMap = Object.fromEntries(data.map(p => [p.id, { ...p, children: [] }]));
+      const roots = data.filter(p => (p.parents || []).length === 0);
 
-      const treeLayout = d3.tree().size([height - 100, width - 200]);
+      data.forEach(p => {
+        (p.parents || []).forEach(pid => {
+          if (personMap[pid]) {
+            personMap[pid].children.push(personMap[p.id]);
+          }
+        });
+      });
+
+      const root = d3.hierarchy(personMap[roots[0].id]);
+
+      const width = document.getElementById("d3").clientWidth;
+      const height = document.getElementById("d3").clientHeight;
+
+      const treeLayout = d3.tree().size([width - 100, height - 100]);
       treeLayout(root);
 
-      // links
-      g.selectAll(".link")
+      const svg = d3.select("#d3").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", "translate(50,50)");
+
+      svg.selectAll(".link")
         .data(root.links())
         .join("path")
-        .attr("class", "link")
-        .attr("d", d3.linkHorizontal()
-          .x(d => d.y)
-          .y(d => d.x));
+        .attr("fill", "none")
+        .attr("stroke", "#ccc")
+        .attr("stroke-width", 2)
+        .attr("d", d3.linkVertical()
+          .x(d => d.x)
+          .y(d => d.y));
 
-      // nodes
-      const node = g.selectAll(".node")
+      const node = svg.selectAll(".node")
         .data(root.descendants())
         .join("g")
         .attr("class", "node")
-        .attr("transform", d => `translate(${d.y},${d.x})`);
+        .attr("transform", d => `translate(${d.x},${d.y})`);
 
-      node.append("circle").attr("r", 6);
+      node.append("circle").attr("r", 6).attr("fill", "#69b3a2");
+
       node.append("text")
-        .attr("dx", 10)
-        .attr("dy", 4)
-        .text(d => d.data.full_name);
+        .attr("dy", -10)
+        .attr("text-anchor", "middle")
+        .text(d => `${d.data.full_name} (${d.data.birth_year || "?"}–${d.data.death_year || "?"})`)
+        .attr("font-size", "12px");
     }
-
-    main();
   </script>
 </body>
 </html>
