@@ -1,0 +1,50 @@
+[
+  {
+    "id": "p1",
+    "full_name": "Anna Kowalska",
+    "gender": "F",
+    "parents": [],
+    "spouses": ["p2"],
+    "children": ["p3", "p4"]
+  },
+  {
+    "id": "p2",
+    "full_name": "Jan Kowalski",
+    "gender": "M",
+    "parents": [],
+    "spouses": ["p1"],
+    "children": ["p3", "p4"]
+  },
+  {
+    "id": "p3",
+    "full_name": "Maria Kowalska",
+    "gender": "F",
+    "parents": ["p1", "p2"],
+    "spouses": [],
+    "children": []
+  },
+  {
+    "id": "p4",
+    "full_name": "Piotr Kowalski",
+    "gender": "M",
+    "parents": ["p1", "p2"],
+    "spouses": ["p5"],
+    "children": ["p6"]
+  },
+  {
+    "id": "p5",
+    "full_name": "Elżbieta Nowak",
+    "gender": "F",
+    "parents": [],
+    "spouses": ["p4"],
+    "children": ["p6"]
+  },
+  {
+    "id": "p6",
+    "full_name": "Tomasz Kowalski",
+    "gender": "M",
+    "parents": ["p4", "p5"],
+    "spouses": [],
+    "children": []
+  }
+]
