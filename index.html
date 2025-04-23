@@ -3,21 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Hello World</title>
+  <title>Family Tree</title>
   <style>
     body {
       font-family: sans-serif;
-      background: #f0f0f0;
-      color: #333;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+    }
+    .node circle {
+      fill: #69b3a2;
+    }
+    .node text {
+      font-size: 14px;
+    }
+    .link {
+      fill: none;
+      stroke: #ccc;
+      stroke-width: 2px;
     }
   </style>
 </head>
 <body>
-  <h1>Hello, world! 👋🌍</h1>
-  <script src="fetch.js"></script>
+  <h2>Family Tree</h2>
+  <svg width="960" height="600"></svg>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    async function main() {
+      const raw = await fetch('tree-data.json');
+      const flat = await raw.json();
+
+      // Convert flat to nested
+      const map = Object.fromEntries(flat.map(p => [p.id, { ...p, children: [] }]));
+      let roots = [];
+
+      for (const p of flat) {
+        if (p.parents.length === 0) {
+          roots.push(map[p.id]);
+        } else {
+          for (const parentId of p.parents) {
+            if (map[parentId]) {
+              map[parentId].children.push(map[p.id]);
+            }
+          }
+        }
+      }
+
+      const root = d3.hierarchy(roots[0]);
+
+      const width = 960;
+      const height = 600;
+
+      const svg = d3.select("svg"),
+            g = svg.append("g").attr("transform", "translate(50,50)");
+
+      const treeLayout = d3.tree().size([height - 100, width - 200]);
+      treeLayout(root);
+
+      // links
+      g.selectAll(".link")
+        .data(root.links())
+        .join("path")
+        .attr("class", "link")
+        .attr("d", d3.linkHorizontal()
+          .x(d => d.y)
+          .y(d => d.x));
+
+      // nodes
+      const node = g.selectAll(".node")
+        .data(root.descendants())
+        .join("g")
+        .attr("class", "node")
+        .attr("transform", d => `translate(${d.y},${d.x})`);
+
+      node.append("circle").attr("r", 6);
+      node.append("text")
+        .attr("dx", 10)
+        .attr("dy", 4)
+        .text(d => d.data.full_name);
+    }
+
+    main();
+  </script>
 </body>
 </html>
