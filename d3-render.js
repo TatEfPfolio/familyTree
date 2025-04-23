@@ -2,6 +2,8 @@ function renderD3(data) {
   const personMap = Object.fromEntries(data.map(p => [p.id, { ...p, children: [] }]));  
   const roots = data.filter(p => (p.parents || []).length === 0);
 
+  console.log("renderD3 starting", document.getElementById("d3").clientWidth, document.getElementById("d3").clientHeight);
+
   // Establish parent-child relationships
   data.forEach(p => {
     (p.parents || []).forEach(pid => {
