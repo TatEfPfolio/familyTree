@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Family Tree - Cytoscape</title>
+  <script src="https://unpkg.com/cytoscape@3.25.0/dist/cytoscape.min.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: sans-serif;
+    }
+    #cy {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="cy"></div>
+
+  <script>
+    fetch('treeData.json')
+      .then(res => res.json())
+      .then(data => {
+        const elements = [];
+
+        data.forEach(p => {
+          const label = `${p.full_name} (${p.birth_year || "?"}–${p.death_year || "?"})`;
+          elements.push({
+            data: { id: p.id, label }
+          });
+
+          (p.parents || []).forEach(parentId => {
+            elements.push({
+              data: {
+                id: `${parentId}_${p.id}`,
+                source: parentId,
+                target: p.id
+              }
+            });
+          });
+
+          (p.spouses || []).forEach(spouseId => {
+            const edgeId = [p.id, spouseId].sort().join('_');
+            if (!elements.some(e => e.data.id === edgeId)) {
+              elements.push({
+                data: {
+                  id: edgeId,
+                  source: p.id,
+                  target: spouseId
+                },
+                classes: 'spouse'
+              });
+            }
+          });
+        });
+
+        cytoscape({
+          container: document.getElementById('cy'),
+          elements,
+          layout: {
+            name: 'breadthfirst',
+            directed: true,
+            padding: 30,
+            orientation: 'vertical'
+          },
+          style: [
+            {
+              selector: 'node',
+              style: {
+                'label': 'data(label)',
+                'text-valign': 'center',
+                'color': '#333',
+                'text-outline-width': 1,
+                'text-outline-color': '#fff',
+                'background-color': '#69b3a2',
+                'font-size': '12px'
+              }
+            },
+            {
+              selector: 'edge',
+              style: {
+                'width': 2,
+                'line-color': '#ccc',
+                'target-arrow-color': '#ccc',
+                'target-arrow-shape': 'triangle'
+              }
+            },
+            {
+              selector: '.spouse',
+              style: {
+                'line-style': 'dashed',
+                'target-arrow-shape': 'none',
+                'line-color': '#999',
+                'width': 1
+              }
+            }
+          ]
+        });
+      });
+  </script>
+</body>
+</html>
