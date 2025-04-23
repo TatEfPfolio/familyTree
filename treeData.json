@@ -4,16 +4,14 @@
     "full_name": "Anna Kowalska",
     "birth_year": 1875,
     "death_year": 1942,
-    "spouses": ["p002"],
-    "children": ["p003", "p004"]
+    "spouses": ["p002"]  
   },
   {
     "id": "p002",
     "full_name": "Jan Nowak",
     "birth_year": 1870,
     "death_year": 1935,
-    "spouses": ["p001"],
-    "children": ["p003", "p004"]
+    "spouses": ["p001"]  
   },
   {
     "id": "p003",
